@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#grad3)"/>
+  <text x="600" y="250" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle">🛒 متجر نينجا العراق</text>
+  <text x="600" y="350" font-family="Arial, sans-serif" font-size="40" fill="rgba(255,255,255,0.9)" text-anchor="middle">أفضل المنتجات بأسعار منافسة</text>
+  <text x="600" y="420" font-family="Arial, sans-serif" font-size="35" fill="rgba(255,255,255,0.8)" text-anchor="middle">✓ توصيل مجاني لجميع المحافظات</text>
+  <text x="600" y="480" font-family="Arial, sans-serif" font-size="35" fill="rgba(255,255,255,0.8)" text-anchor="middle">✓ دفع عند الاستلام</text>
+  <text x="600" y="540" font-family="Arial, sans-serif" font-size="35" fill="rgba(255,255,255,0.8)" text-anchor="middle">✓ ضمان الجودة</text>
+</svg>
