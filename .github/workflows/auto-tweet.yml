@@ -1,39 +1,43 @@
-name: Auto Tweet Products
+name: Auto Post Products - Twitter Only
 
 on:
   schedule:
-    # Run every 7 hours
+    # كل 7 ساعات
     - cron: '0 */7 * * *'
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch: # للتشغيل اليدوي
 
 jobs:
-  tweet:
+  post-product:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      
-      - name: Install dependencies
-        run: npm install axios
-      
-      - name: Post to Twitter
-        env:
-          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
-          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
-          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
-          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
-        run: node .github/workflows/post-tweet.js
-      
-      - name: Commit tracking file
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add tweet-tracking.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update tweet tracking [skip ci]"
-          git push
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install requests tweepy
+    
+    - name: Run auto-posting script (Twitter only)
+      env:
+        # GitHub token لسحب أسماء الملفات
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # مفاتيح Twitter
+        TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+        TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+        TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+        TWITTER_ACCESS_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
+      run: python .github/scripts/auto_post.py
+    
+    - name: Commit tracking file
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add posted_products.json || true
+        git commit -m "Update posted products tracking [skip ci]" || true
+        git push || true
