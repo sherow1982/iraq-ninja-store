@@ -57,6 +57,20 @@ async function postTweet(text) {
   const url = 'https://api.twitter.com/1.1/statuses/update.json';
   const method = 'POST';
   
+  // Check if secrets are set
+  if (!process.env.TWITTER_API_KEY) {
+    throw new Error('TWITTER_API_KEY is not set in secrets');
+  }
+  if (!process.env.TWITTER_API_SECRET) {
+    throw new Error('TWITTER_API_SECRET is not set in secrets');
+  }
+  if (!process.env.TWITTER_ACCESS_TOKEN) {
+    throw new Error('TWITTER_ACCESS_TOKEN is not set in secrets');
+  }
+  if (!process.env.TWITTER_ACCESS_TOKEN_SECRET) {
+    throw new Error('TWITTER_ACCESS_TOKEN_SECRET is not set in secrets');
+  }
+  
   const oauthParams = {
     oauth_consumer_key: process.env.TWITTER_API_KEY,
     oauth_token: process.env.TWITTER_ACCESS_TOKEN,
@@ -92,10 +106,28 @@ async function postTweet(text) {
         }
       }
     );
-    console.log('Tweet posted successfully!');
+    console.log('✅ Tweet posted successfully!');
     return response.data;
   } catch (error) {
-    console.error('Error posting tweet:', error.response?.data || error.message);
+    console.error('❌ Error posting tweet:');
+    if (error.response) {
+      console.error('Status:', error.response.status);
+      console.error('Error details:', JSON.stringify(error.response.data, null, 2));
+      
+      // Common error messages
+      if (error.response.status === 403) {
+        console.error('\n⚠️  403 Forbidden - Possible reasons:');
+        console.error('1. Invalid API keys or Access tokens');
+        console.error('2. App permissions not set correctly (need Read and Write)');
+        console.error('3. Access tokens not generated after setting permissions');
+        console.error('\nPlease check:');
+        console.error('- Go to https://developer.x.com/');
+        console.error('- Check App Permissions: Must be "Read and Write"');
+        console.error('- Regenerate Access Token after changing permissions');
+      }
+    } else {
+      console.error('Error message:', error.message);
+    }
     throw error;
   }
 }
@@ -116,11 +148,15 @@ const productHashtags = generateHashtags(product.title);
 
 const tweetText = `${product.title}\n\n${productUrl}\n\n${productHashtags} #العراق ${iraqCities}`;
 
+console.log('📤 Preparing to post tweet...');
+console.log('Product:', product.title);
+console.log('URL:', productUrl);
+console.log(`Tweet ${tracking.lastIndex + 1}/${products.length}`);
+
 // Post tweet
 postTweet(tweetText).then(() => {
-  console.log(`Posted product ${tracking.lastIndex + 1}/${products.length}: ${product.title}`);
-  console.log(`URL: ${productUrl}`);
+  console.log(`\n✅ Successfully posted product ${tracking.lastIndex + 1}/${products.length}`);
 }).catch(error => {
-  console.error('Failed to post tweet:', error);
+  console.error('\n❌ Failed to post tweet');
   process.exit(1);
 });
