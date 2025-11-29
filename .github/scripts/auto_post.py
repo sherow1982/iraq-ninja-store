@@ -5,7 +5,10 @@ import os
 import json
 import re
 import tweepy
+import requests
+from urllib.parse import quote
 from pathlib import Path
+from io import BytesIO
 
 # قراءة ملف المنتجات
 with open('products.json', 'r', encoding='utf-8') as f:
@@ -44,30 +47,30 @@ def create_product_slug(title, sku):
     
     return f"{title_slug}-{sku_clean}.html"
 
-# إنشاء هاشتاجات من العنوان
-def generate_hashtags(title):
-    words = [w for w in title.split() if len(w) > 3][:3]
-    hashtags = []
-    for word in words:
-        clean_word = re.sub(r'[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9]', '', word)
-        if clean_word:
-            hashtags.append(f'#{clean_word}')
-    return ' '.join(hashtags)
+# إنشاء هاشتاج من العنوان (مع underscore)
+def generate_product_hashtag(title):
+    # استخدام العنوان كامل مع underscore
+    hashtag = title.strip()
+    hashtag = re.sub(r'\s+', '_', hashtag)  # مسافات إلى underscore
+    hashtag = re.sub(r'[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF_a-zA-Z0-9]', '', hashtag)
+    hashtag = re.sub(r'_+', '_', hashtag)  # underscores متعددة إلى واحدة
+    hashtag = hashtag.strip('_')  # إزالة underscores في البداية والنهاية
+    return f'#{hashtag}'
 
 # محافظات العراق
 iraq_cities = '#بغداد #البصرة #الموصل #أربيل #كربلاء #النجف #السليمانية #الأنبار #ديالى #ذي_قار #واسط #صلاح_الدين #بابل #كركوك #القادسية #ميسان #المثنى #دهوك'
 
-# إنشاء رابط المنتج
+# إنشاء رابط المنتج (بدون URL encoding للعربي)
 product_slug = create_product_slug(product['title'], product['sku'])
 product_url = f"https://iraq-ninja-store.arabsad.com/products/{product_slug}"
-product_hashtags = generate_hashtags(product['title'])
+product_hashtag = generate_product_hashtag(product['title'])
 
-# نص التغريدة
+# نص التغريدة (بدون الرابط - هيتحط في media)
 tweet_text = f"""{product['title']}
 
-{product_url}
+{product_hashtag} #العراق {iraq_cities}
 
-{product_hashtags} #العراق {iraq_cities}"""
+{product_url}"""
 
 print(f"\n🔗 الرابط: {product_url}")
 print(f"\n📤 نص التغريدة:")
@@ -91,6 +94,28 @@ try:
         print("  - TWITTER_ACCESS_SECRET")
         exit(1)
     
+    # تحميل صورة المنتج
+    print("\n📥 تحميل صورة المنتج...")
+    image_response = requests.get(product['image_link'])
+    if image_response.status_code != 200:
+        print(f"⚠️  فشل تحميل الصورة: {image_response.status_code}")
+        media_id = None
+    else:
+        # رفع الصورة باستخدام API v1.1 (media endpoint متاح في Free tier)
+        auth = tweepy.OAuth1UserHandler(
+            api_key, api_secret,
+            access_token, access_secret
+        )
+        api_v1 = tweepy.API(auth)
+        
+        # رفع الصورة
+        media = api_v1.media_upload(
+            filename='product.jpg',
+            file=BytesIO(image_response.content)
+        )
+        media_id = media.media_id_string
+        print(f"✅ تم رفع الصورة: {media_id}")
+    
     # استخدام Twitter API v2 (متوافق مع Free tier)
     client = tweepy.Client(
         consumer_key=api_key,
@@ -99,8 +124,11 @@ try:
         access_token_secret=access_secret
     )
     
-    # نشر التغريدة باستخدام API v2
-    response = client.create_tweet(text=tweet_text)
+    # نشر التغريدة مع الصورة
+    if media_id:
+        response = client.create_tweet(text=tweet_text, media_ids=[media_id])
+    else:
+        response = client.create_tweet(text=tweet_text)
     
     print("\n✅ تم نشر التغريدة بنجاح!")
     print(f"🔗 رابط التغريدة: https://twitter.com/i/web/status/{response.data['id']}")
@@ -124,4 +152,6 @@ except tweepy.TweepyException as e:
     
 except Exception as e:
     print(f"\n❌ خطأ غير متوقع: {str(e)}")
+    import traceback
+    traceback.print_exc()
     exit(1)
