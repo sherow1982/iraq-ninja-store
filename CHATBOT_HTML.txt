@@ -1,0 +1,35 @@
+<!-- ============================================
+     Chatbot HTML Code
+     أضف هذا الكود قبل إغلاق tag </body>
+     ============================================ -->
+
+<!-- Chatbot Container -->
+<div id="chatbot-container">
+    <!-- زر فتح الروبوت -->
+    <button id="chatbot-toggle" aria-expanded="false" aria-controls="chatbot-window">
+        <span>💬</span>
+        <span>مساعد نينجا</span>
+    </button>
+
+    <!-- نافذة الروبوت -->
+    <div id="chatbot-window" class="hidden">
+        <!-- رأس الروبوت -->
+        <div id="chatbot-header">
+            <h3>🤖 مساعد نينجا الذكي</h3>
+            <button id="chatbot-close" aria-label="إغلاق">✕</button>
+        </div>
+
+        <!-- منطقة الرسائل -->
+        <div id="chatbot-messages">
+            <div class="message bot-message">
+                مرحباً! 👋 أنا مساعد نينجا الذكي. كيف يمكنني مساعدتك اليوم؟ اسأل عن المنتجات والأسعار والتوصيل! 🛍️
+            </div>
+        </div>
+
+        <!-- منطقة الإدخال -->
+        <div id="chatbot-input-area">
+            <input type="text" id="user-input" placeholder="اكتب سؤالك هنا..." aria-label="إدخال الرسالة">
+            <button id="send-button" aria-label="إرسال">📤</button>
+        </div>
+    </div>
+</div>
