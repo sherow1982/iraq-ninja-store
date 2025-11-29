@@ -53,6 +53,22 @@ jobs:
           // Save tracking
           fs.writeFileSync(trackingFile, JSON.stringify(tracking, null, 2));
           
+          // Function to create URL slug from product title and SKU
+          function createProductSlug(title, sku) {
+            // Remove SKU prefix (A. or G.) and use lowercase
+            const skuClean = sku.toLowerCase().replace(/^[ag]\./, '');
+            
+            // Convert title to URL-safe slug
+            const titleSlug = title
+              .trim()
+              .replace(/\s+/g, '-')  // Replace spaces with hyphens
+              .replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\-]/g, '')  // Keep only Arabic chars and hyphens
+              .replace(/-+/g, '-')  // Replace multiple hyphens with single
+              .replace(/^-|-$/g, '');  // Remove leading/trailing hyphens
+            
+            return `${titleSlug}-${skuClean}.html`;
+          }
+          
           // OAuth 1.0a signature generation
           function generateOAuthSignature(method, url, params, consumerSecret, tokenSecret = '') {
             const paramString = Object.keys(params)
@@ -126,8 +142,9 @@ jobs:
           // Iraqi cities hashtags
           const iraqCities = '#بغداد #البصرة #الموصل #أربيل #كربلاء #النجف #السليمانية #الأنبار #ديالى #ذي_قار #واسط #صلاح_الدين #بابل #كركوك #القادسية #ميسان #المثنى #دهوك';
           
-          // Create tweet text with sitemap URL
-          const productUrl = `https://sherow1982.github.io/iraq-ninja-store/product.html?id=${product.id}`;
+          // Create product URL using sitemap pattern
+          const productSlug = createProductSlug(product.title, product.sku);
+          const productUrl = `https://iraq-ninja-store.arabsad.com/products/${productSlug}`;
           const productHashtags = generateHashtags(product.title);
           
           const tweetText = `${product.title}\n\n${productUrl}\n\n${productHashtags} #العراق ${iraqCities}`;
@@ -136,6 +153,7 @@ jobs:
           await postTweet(tweetText);
           
           console.log(`Posted product ${tracking.lastIndex + 1}/${products.length}: ${product.title}`);
+          console.log(`URL: ${productUrl}`);
           EOF
       
       - name: Commit tracking file
