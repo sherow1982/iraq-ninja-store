@@ -7,6 +7,7 @@
 <meta name="description" content="تسوق أفضل 302 منتج في العراق مع توصيل مجاني">
 <link rel="canonical" href="https://iraq-ninja-store.arabsad.com/">
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/chatbot.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f5f5f5;color:#333;line-height:1.6;direction:rtl}
@@ -69,9 +70,109 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f5f5f5;color:#333;line
 .load-more-btn{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:15px 40px;border:none;border-radius:25px;font-size:18px;font-weight:bold;cursor:pointer}
 .hidden{display:none}
 </style>
-<!-- إضافة رابط اﻟﺸﺎﺕ ﺑﻮﺕ ستايل -->
-<link rel="stylesheet" href="/chatbot.css">
 </head>
 <body>
 
 <header class="site-header">
+    <div class="header-container">
+        <div class="top-bar">
+            <div class="logo">
+                <a href="/index.html">
+                    <img src="/assets/logo.png" alt="متجر نينجا العراق" class="logo-img">
+                    <span>متجر نينجا العراق</span>
+                </a>
+            </div>
+            <div class="search-box">
+                <form action="/404.html" method="get" class="search-form">
+                    <input type="text" name="q" placeholder="ابحث عن منتج..." class="search-input" required>
+                    <button type="submit" class="search-btn">🔍 بحث</button>
+                </form>
+            </div>
+            <div class="header-actions">
+                <a href="https://wa.me/201110760081" class="whatsapp-btn" target="_blank">📱 واتساب</a>
+            </div>
+        </div>
+        <nav class="main-nav">
+            <a href="/index.html">الرئيسية</a>
+            <div class="dropdown">
+                <a href="/categories.html" class="dropbtn">الفئات ▼</a>
+                <div class="dropdown-content">
+                    <a href="/categories/ألعاب-وهوايات-ألعاب.html">ألعاب وهوايات &gt; ألعاب (2)</a>
+<a href="/categories/إلكترونيات-أجهزة-كمبيوتر-أجهزة-كمبيوتر-محمولة.html">إلكترونيات &gt; أجهزة كمبيوتر &gt; أجهزة كمبيوتر محمولة (1)</a>
+<a href="/categories/إلكترونيات-إلكترونيات-صوتية-سماعات-رأس.html">إلكترونيات &gt; إلكترونيات صوتية &gt; سماعات رأس (1)</a>
+<a href="/categories/إلكترونيات-ملحقات-الهواتف-شواحن.html">إلكترونيات &gt; ملحقات الهواتف &gt; شواحن (1)</a>
+<a href="/categories/إلكترونيات-هواتف-ذكية.html">إلكترونيات &gt; هواتف ذكية (4)</a>
+                </div>
+            </div>
+            <a href="/legal/about.html">من نحن</a>
+            <a href="/legal/contact.html">اتصل بنا</a>
+            <a href="/legal/shipping.html">الشحن</a>
+            <a href="/legal/returns.html">الاسترجاع</a>
+            <a href="/legal/privacy.html">الخصوصية</a>
+            <a href="/legal/terms.html">الشروط</a>
+        </nav>
+    </div>
+</header>
+
+<div class="hero-section">
+<h1>مرحباً بك في متجر نينجا العراق</h1>
+<p>أفضل المنتجات بأسعار منافسة مع توصيل مجاني لجميع المحافظات</p>
+</div>
+
+<footer class="site-footer">
+<div class="footer-container">
+<div class="footer-section">
+<h3>عن المتجر</h3>
+<ul>
+<li><a href="/legal/about.html">من نحن</a></li>
+<li><a href="/legal/contact.html">اتصل بنا</a></li>
+</ul>
+</div>
+<div class="footer-section">
+<h3>خدمة العملاء</h3>
+<ul>
+<li><a href="/legal/shipping.html">الشحن والتوصيل</a></li>
+<li><a href="/legal/returns.html">سياسة الارجاع</a></li>
+<li><a href="/legal/privacy.html">سياسة الخصوصية</a></li>
+<li><a href="/legal/terms.html">الشروط والأحكام</a></li>
+</ul>
+</div>
+</div>
+<div class="footer-bottom">
+<p>&copy; 2024 متجر نينجا العراق. جميع الحقوق محفوظة.</p>
+</div>
+</footer>
+
+<!-- Chatbot Container -->
+<div id="chatbot-container">
+    <button id="chatbot-toggle" aria-expanded="false" aria-controls="chatbot-window">
+        <span>💬</span>
+        <span>مساعد نينجا</span>
+    </button>
+
+    <div id="chatbot-window" class="hidden">
+        <div id="chatbot-header">
+            <h3>🤖 مساعد نينجا الذكي</h3>
+            <button id="chatbot-close" aria-label="إغلاق">✕</button>
+        </div>
+
+        <div id="chatbot-messages">
+            <div class="message bot-message">
+                مرحباً! 👋 أنا مساعد نينجا الذكي. كيف يمكنني مساعدتك اليوم؟ اسأل عن المنتجات والأسعار والتوصيل! 🛍️
+            </div>
+        </div>
+
+        <div id="chatbot-input-area">
+            <input type="text" id="user-input" placeholder="اكتب سؤالك هنا..." aria-label="إدخال الرسالة">
+            <button id="send-button" aria-label="إرسال">📤</button>
+        </div>
+    </div>
+</div>
+
+<script src="/chatbot.js"></script>
+<script>
+function loadMore(){const hiddenProducts=document.querySelectorAll('.product-hidden');let count=0;hiddenProducts.forEach(product=>{if(count<25){product.classList.remove('hidden','product-hidden');count++}});if(document.querySelectorAll('.product-hidden').length===0){document.querySelector('.load-more').style.display='none'}}
+</script>
+
+</body>
+</html>
