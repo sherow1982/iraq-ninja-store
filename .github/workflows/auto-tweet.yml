@@ -1,0 +1,113 @@
+name: Auto Tweet Products
+
+on:
+  schedule:
+    # Run every 3 hours
+    - cron: '0 */3 * * *'
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  tweet:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install dependencies
+        run: |
+          npm install axios
+      
+      - name: Post to Twitter
+        env:
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_SECRET: ${{ secrets.TWITTER_API_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+        run: |
+          node << 'EOF'
+          const axios = require('axios');
+          const crypto = require('crypto');
+          const fs = require('fs');
+          
+          // Read products
+          const products = JSON.parse(fs.readFileSync('products.json', 'utf8'));
+          
+          // Get random product
+          const randomProduct = products[Math.floor(Math.random() * products.length)];
+          
+          // OAuth 1.0a signature generation
+          function generateOAuthSignature(method, url, params, consumerSecret, tokenSecret = '') {
+            const paramString = Object.keys(params)
+              .sort()
+              .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+              .join('&');
+            
+            const signatureBaseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(paramString)}`;
+            const signingKey = `${encodeURIComponent(consumerSecret)}&${encodeURIComponent(tokenSecret)}`;
+            
+            return crypto
+              .createHmac('sha1', signingKey)
+              .update(signatureBaseString)
+              .digest('base64');
+          }
+          
+          // Twitter API v1.1 (for posting tweets)
+          async function postTweet(text) {
+            const url = 'https://api.twitter.com/1.1/statuses/update.json';
+            const method = 'POST';
+            
+            const oauthParams = {
+              oauth_consumer_key: process.env.TWITTER_API_KEY,
+              oauth_token: process.env.TWITTER_ACCESS_TOKEN,
+              oauth_signature_method: 'HMAC-SHA1',
+              oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+              oauth_nonce: crypto.randomBytes(16).toString('hex'),
+              oauth_version: '1.0',
+              status: text
+            };
+            
+            const signature = generateOAuthSignature(
+              method,
+              url,
+              oauthParams,
+              process.env.TWITTER_API_SECRET,
+              process.env.TWITTER_ACCESS_TOKEN_SECRET
+            );
+            
+            oauthParams.oauth_signature = signature;
+            
+            const authHeader = 'OAuth ' + Object.keys(oauthParams)
+              .filter(key => key.startsWith('oauth_'))
+              .map(key => `${encodeURIComponent(key)}="${encodeURIComponent(oauthParams[key])}"`)
+              .join(', ');
+            
+            try {
+              const response = await axios.post(url, 
+                `status=${encodeURIComponent(text)}`,
+                {
+                  headers: {
+                    'Authorization': authHeader,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                  }
+                }
+              );
+              console.log('Tweet posted successfully!');
+              return response.data;
+            } catch (error) {
+              console.error('Error posting tweet:', error.response?.data || error.message);
+              throw error;
+            }
+          }
+          
+          // Create tweet text
+          const tweetText = `🛒 ${randomProduct.title}\n\n💰 السعر: ${randomProduct.sale_price.toLocaleString('ar-IQ')} IQD\n⚡ خصم من: ${randomProduct.price.toLocaleString('ar-IQ')} IQD\n\n🔗 اطلب الآن: https://sherow1982.github.io/iraq-ninja-store/product.html?id=${randomProduct.id}\n\n#عراق #تسوق_اونلاين #عروض`;
+          
+          // Post tweet
+          postTweet(tweetText);
+          EOF
