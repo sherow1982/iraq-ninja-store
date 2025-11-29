@@ -74,7 +74,7 @@ print(f"\n📤 نص التغريدة:")
 print(tweet_text)
 print(f"\n📊 طول التغريدة: {len(tweet_text)} حرف")
 
-# الاتصال بـ Twitter
+# الاتصال بـ Twitter API v2
 try:
     # التحقق من وجود المفاتيح
     api_key = os.getenv('TWITTER_API_KEY')
@@ -91,33 +91,31 @@ try:
         print("  - TWITTER_ACCESS_SECRET")
         exit(1)
     
-    # مصادقة Twitter API v1.1
-    auth = tweepy.OAuth1UserHandler(
-        api_key, api_secret,
-        access_token, access_secret
+    # استخدام Twitter API v2 (متوافق مع Free tier)
+    client = tweepy.Client(
+        consumer_key=api_key,
+        consumer_secret=api_secret,
+        access_token=access_token,
+        access_token_secret=access_secret
     )
-    api = tweepy.API(auth)
     
-    # التحقق من المصادقة
-    api.verify_credentials()
-    print("\n✅ تم الاتصال بـ Twitter بنجاح!")
+    # نشر التغريدة باستخدام API v2
+    response = client.create_tweet(text=tweet_text)
     
-    # نشر التغريدة
-    api.update_status(tweet_text)
     print("\n✅ تم نشر التغريدة بنجاح!")
+    print(f"🔗 رابط التغريدة: https://twitter.com/i/web/status/{response.data['id']}")
     
 except tweepy.TweepyException as e:
     print(f"\n❌ خطأ في Twitter API: {str(e)}")
     
-    if "403" in str(e):
+    if "403" in str(e) or "Forbidden" in str(e):
         print("\n⚠️  خطأ 403 - الأسباب المحتملة:")
         print("1. صلاحيات التطبيق خاطئة (يجب أن تكون Read and Write)")
-        print("2. Access Token لم يتم إعادة توليده بعد تغيير الصلاحيات")
-        print("3. مفاتيح API غير صحيحة")
+        print("2. لم يتم Elevated Access (لكن API v2 يجب أن يعمل مع Free)")
         print("\n🔧 الحل:")
         print("  1. اذهب إلى: https://developer.x.com/")
-        print("  2. اختر التطبيق > Settings")
-        print("  3. غيّر App permissions إلى 'Read and Write'")
+        print("  2. اختر التطبيق > Settings > User authentication settings")
+        print("  3. تأكد أن App permissions = 'Read and Write'")
         print("  4. اذهب إلى Keys and tokens")
         print("  5. اضغط Regenerate على Access Token and Secret")
         print("  6. انسخ المفاتيح الجديدة وضعها في GitHub Secrets")
