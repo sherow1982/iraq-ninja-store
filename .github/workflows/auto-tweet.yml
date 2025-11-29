@@ -2,8 +2,8 @@ name: Auto Tweet Products
 
 on:
   schedule:
-    # Run every 3 hours
-    - cron: '0 */3 * * *'
+    # Run every 7 hours
+    - cron: '0 */7 * * *'
   workflow_dispatch: # Manual trigger
 
 jobs:
@@ -38,8 +38,20 @@ jobs:
           // Read products
           const products = JSON.parse(fs.readFileSync('products.json', 'utf8'));
           
-          // Get random product
-          const randomProduct = products[Math.floor(Math.random() * products.length)];
+          // Read or create tracking file
+          let tracking = { lastIndex: -1 };
+          const trackingFile = 'tweet-tracking.json';
+          
+          if (fs.existsSync(trackingFile)) {
+            tracking = JSON.parse(fs.readFileSync(trackingFile, 'utf8'));
+          }
+          
+          // Get next product
+          tracking.lastIndex = (tracking.lastIndex + 1) % products.length;
+          const product = products[tracking.lastIndex];
+          
+          // Save tracking
+          fs.writeFileSync(trackingFile, JSON.stringify(tracking, null, 2));
           
           // OAuth 1.0a signature generation
           function generateOAuthSignature(method, url, params, consumerSecret, tokenSecret = '') {
@@ -105,9 +117,31 @@ jobs:
             }
           }
           
-          // Create tweet text
-          const tweetText = `🛒 ${randomProduct.title}\n\n💰 السعر: ${randomProduct.sale_price.toLocaleString('ar-IQ')} IQD\n⚡ خصم من: ${randomProduct.price.toLocaleString('ar-IQ')} IQD\n\n🔗 اطلب الآن: https://sherow1982.github.io/iraq-ninja-store/product.html?id=${randomProduct.id}\n\n#عراق #تسوق_اونلاين #عروض`;
+          // Generate hashtags from product title (first 2-3 meaningful words)
+          function generateHashtags(title) {
+            const words = title.split(' ').filter(w => w.length > 3).slice(0, 3);
+            return words.map(w => '#' + w.replace(/[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFFa-zA-Z0-9]/g, '')).join(' ');
+          }
+          
+          // Iraqi cities hashtags
+          const iraqCities = '#بغداد #البصرة #الموصل #أربيل #كربلاء #النجف #السليمانية #الأنبار #ديالى #ذي_قار #واسط #صلاح_الدين #بابل #كركوك #القادسية #ميسان #المثنى #دهوك';
+          
+          // Create tweet text with sitemap URL
+          const productUrl = `https://sherow1982.github.io/iraq-ninja-store/product.html?id=${product.id}`;
+          const productHashtags = generateHashtags(product.title);
+          
+          const tweetText = `${product.title}\n\n${productUrl}\n\n${productHashtags} #العراق ${iraqCities}`;
           
           // Post tweet
-          postTweet(tweetText);
+          await postTweet(tweetText);
+          
+          console.log(`Posted product ${tracking.lastIndex + 1}/${products.length}: ${product.title}`);
           EOF
+      
+      - name: Commit tracking file
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add tweet-tracking.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update tweet tracking [skip ci]"
+          git push
