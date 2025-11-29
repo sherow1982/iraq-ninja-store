@@ -33,39 +33,49 @@ print(f"🔢 {tracking['last_index'] + 1}/{len(products)}")
 with open(tracking_file, 'w', encoding='utf-8') as f:
     json.dump(tracking, f, ensure_ascii=False, indent=2)
 
-# إنشاء slug للمنتج
+# إنشاء slug للمنتج (بنفس طريقة السايت ماب)
 def create_product_slug(title, sku):
-    # إزالة بادئة SKU
-    sku_clean = re.sub(r'^[AG]\.', '', sku, flags=re.IGNORECASE).lower()
+    # إزالة بادئة SKU (A. أو a.)
+    sku_clean = re.sub(r'^[Aa]\.', '', sku).lower()
     
     # تحويل العنوان إلى slug
+    # إزالة الأحرف الخاصة وترك الحروف العربية والشرطات فقط
     title_slug = title.strip()
-    title_slug = re.sub(r'\s+', '-', title_slug)  # مسافات إلى شرطات
-    title_slug = re.sub(r'[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\-]', '', title_slug)
-    title_slug = re.sub(r'-+', '-', title_slug)  # شرطات متعددة إلى واحدة
-    title_slug = title_slug.strip('-')  # إزالة شرطات في البداية والنهاية
+    # استبدال المسافات بشرطات
+    title_slug = re.sub(r'\s+', '-', title_slug)
+    # إزالة أي شيء غير عربي أو شرطات
+    title_slug = re.sub(r'[^\u0600-\u06FF\-]', '', title_slug)
+    # إزالة الشرطات المتكررة
+    title_slug = re.sub(r'-+', '-', title_slug)
+    # إزالة الشرطات من البداية والنهاية
+    title_slug = title_slug.strip('-')
     
+    # تركيب الـ slug: اسم-المنتج-sku.html
     return f"{title_slug}-{sku_clean}.html"
 
 # إنشاء هاشتاج من العنوان (مع underscore)
 def generate_product_hashtag(title):
     # استخدام العنوان كامل مع underscore
     hashtag = title.strip()
-    hashtag = re.sub(r'\s+', '_', hashtag)  # مسافات إلى underscore
-    hashtag = re.sub(r'[^\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF_a-zA-Z0-9]', '', hashtag)
-    hashtag = re.sub(r'_+', '_', hashtag)  # underscores متعددة إلى واحدة
-    hashtag = hashtag.strip('_')  # إزالة underscores في البداية والنهاية
+    # استبدال المسافات بـ underscore
+    hashtag = re.sub(r'\s+', '_', hashtag)
+    # إزالة أي أحرف خاصة وترك العربية والـ underscore فقط
+    hashtag = re.sub(r'[^\u0600-\u06FF_a-zA-Z0-9]', '', hashtag)
+    # إزالة underscores المتكررة
+    hashtag = re.sub(r'_+', '_', hashtag)
+    # إزالة underscores من البداية والنهاية
+    hashtag = hashtag.strip('_')
     return f'#{hashtag}'
 
 # محافظات العراق
 iraq_cities = '#بغداد #البصرة #الموصل #أربيل #كربلاء #النجف #السليمانية #الأنبار #ديالى #ذي_قار #واسط #صلاح_الدين #بابل #كركوك #القادسية #ميسان #المثنى #دهوك'
 
-# إنشاء رابط المنتج (بدون URL encoding للعربي)
+# إنشاء رابط المنتج
 product_slug = create_product_slug(product['title'], product['sku'])
 product_url = f"https://iraq-ninja-store.arabsad.com/products/{product_slug}"
 product_hashtag = generate_product_hashtag(product['title'])
 
-# نص التغريدة (بدون الرابط - هيتحط في media)
+# نص التغريدة
 tweet_text = f"""{product['title']}
 
 {product_hashtag} #العراق {iraq_cities}
