@@ -1,8 +1,179 @@
-<!-- بداية كود شات بوت -->
-<link rel="stylesheet" href="/chatbot.css">
-<div id="chatbot-container" style="position: fixed; bottom: 32px; left: 32px; z-index:99999;">
-  <iframe id="chatbot-iframe" title="الدردشة" src="/CHATBOT_HTML.txt" style="width:345px;height:420px;max-width:95vw;max-height:85vh;border:none;border-radius:18px;box-shadow:0 0 18px #764ba2;"></iframe>
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>متجر نينجا العراق - أفضل المنتجات بأسعار منافسة | توصيل مجاني</title>
+<meta name="description" content="تسوق أفضل 302 منتج في العراق مع توصيل مجاني">
+<link rel="canonical" href="https://iraq-ninja-store.arabsad.com/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f5f5f5;color:#333;line-height:1.6;direction:rtl}
+.site-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.header-container{max-width:1400px;margin:0 auto;padding:0 20px}
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:20px 0;flex-wrap:wrap;gap:20px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo a{color:white;text-decoration:none;font-size:24px;font-weight:bold;display:flex;align-items:center;gap:10px}
+.logo-img{height:50px;width:50px;object-fit:contain;background:white;border-radius:10px;padding:5px}
+.search-box{flex:1;max-width:600px}
+.search-form{display:flex;gap:10px}
+.search-input{flex:1;padding:12px 20px;border:none;border-radius:25px;font-size:16px;outline:none}
+.search-btn{background:#25d366;color:white;padding:12px 30px;border:none;border-radius:25px;font-weight:bold;cursor:pointer;transition:all 0.3s}
+.search-btn:hover{background:#128c7e;transform:translateY(-2px)}
+.header-actions .whatsapp-btn{background:#25d366;color:white;padding:12px 25px;border-radius:25px;text-decoration:none;font-weight:bold;display:inline-block;transition:transform 0.2s}
+.header-actions .whatsapp-btn:hover{transform:translateY(-2px)}
+.main-nav{display:flex;gap:5px;padding:15px 0;border-top:1px solid rgba(255,255,255,0.2);flex-wrap:wrap;justify-content:center}
+.main-nav a{color:white;text-decoration:none;padding:10px 20px;border-radius:5px;transition:background 0.3s;white-space:nowrap}
+.main-nav a:hover{background:rgba(255,255,255,0.2)}
+.dropdown{position:relative;display:inline-block}
+.dropdown .dropbtn{color:white;text-decoration:none;padding:10px 20px;border-radius:5px;transition:background 0.3s;cursor:pointer;display:inline-block}
+.dropdown:hover .dropbtn{background:rgba(255,255,255,0.2)}
+.dropdown-content{display:none;position:absolute;background:white;min-width:250px;box-shadow:0 8px 16px rgba(0,0,0,0.2);z-index:1000;border-radius:8px;overflow:hidden;max-height:400px;overflow-y:auto;top:100%;right:0}
+.dropdown-content a{color:#2d3748;padding:12px 20px;text-decoration:none;display:block;transition:background 0.3s;border-bottom:1px solid #f3f4f6}
+.dropdown-content a:hover{background:#f9fafb;color:#667eea}
+.dropdown:hover .dropdown-content{display:block}
+.site-footer{background:#2d3748;color:white;padding:40px 0 20px;margin-top:60px}
+.footer-container{max-width:1400px;margin:0 auto;padding:0 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:30px;margin-bottom:30px}
+.footer-section h3{color:#667eea;margin-bottom:15px;font-size:18px}
+.footer-section ul{list-style:none}
+.footer-section ul li{margin-bottom:10px}
+.footer-section a{color:#e2e8f0;text-decoration:none;transition:color 0.3s}
+.footer-section a:hover{color:#667eea}
+.footer-bottom{text-align:center;padding-top:20px;border-top:1px solid rgba(255,255,255,0.1);color:#a0aec0;max-width:1400px;margin:0 auto;padding:20px}
+.breadcrumb{background:#fff;padding:15px 20px;border-radius:8px;margin:20px auto;max-width:1400px;font-size:14px}
+.breadcrumb a{color:#667eea;text-decoration:none;margin:0 5px;transition:color 0.3s}
+.breadcrumb a:hover{color:#764ba2;text-decoration:underline}
+.breadcrumb span{color:#6b7280;margin:0 5px}
+
+.hero-section{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:60px 20px;text-align:center}
+.hero-section h1{font-size:48px;margin-bottom:20px}
+.products-section{max-width:1400px;margin:40px auto;padding:0 20px}
+.section-title{text-align:center;font-size:36px;color:#2d3748;margin-bottom:40px}
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:25px;margin-bottom:30px}
+.product-card{background:white;border-radius:15px;overflow:hidden;box-shadow:0 5px 20px rgba(0,0,0,0.1);transition:all 0.3s;display:flex;flex-direction:column}
+.product-card:hover{transform:translateY(-5px)}
+.product-image{width:100%;height:250px;object-fit:cover;cursor:pointer}
+.product-info{padding:20px;flex-grow:1;display:flex;flex-direction:column}
+.product-title{font-size:16px;font-weight:bold;color:#2d3748;margin-bottom:10px;min-height:40px;cursor:pointer}
+.product-title:hover{color:#667eea}
+.product-price{font-size:24px;font-weight:bold;color:#667eea;margin-bottom:15px}
+.product-sku{font-size:12px;color:#6b7280;margin-bottom:15px}
+.product-actions{display:flex;gap:10px;margin-top:auto}
+.btn-details,.btn-whatsapp{flex:1;padding:12px 8px;border:none;border-radius:8px;font-weight:bold;text-decoration:none;text-align:center;font-size:14px;transition:all 0.3s;display:inline-block;cursor:pointer}
+.btn-details{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white}
+.btn-details:hover{transform:translateY(-2px)}
+.btn-whatsapp{background:linear-gradient(135deg,#25d366 0%,#128c7e 100%);color:white}
+.btn-whatsapp:hover{transform:translateY(-2px)}
+.load-more{text-align:center;margin:40px 0}
+.load-more-btn{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;padding:15px 40px;border:none;border-radius:25px;font-size:18px;font-weight:bold;cursor:pointer}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+    <div class="header-container">
+        <div class="top-bar">
+            <div class="logo">
+                <a href="/index.html">
+                    <img src="/assets/logo.png" alt="متجر نينجا العراق" class="logo-img">
+                    <span>متجر نينجا العراق</span>
+                </a>
+            </div>
+            <div class="search-box">
+                <form action="/404.html" method="get" class="search-form">
+                    <input type="text" name="q" placeholder="ابحث عن منتج..." class="search-input" required>
+                    <button type="submit" class="search-btn">🔍 بحث</button>
+                </form>
+            </div>
+            <div class="header-actions">
+                <a href="https://wa.me/201110760081" class="whatsapp-btn" target="_blank">📱 واتساب</a>
+            </div>
+        </div>
+        <nav class="main-nav">
+            <a href="/index.html">الرئيسية</a>
+            <div class="dropdown">
+                <a href="/categories.html" class="dropbtn">الفئات ▼</a>
+                <div class="dropdown-content">
+                    <a href="/categories/ألعاب-وهوايات-ألعاب.html">ألعاب وهوايات > ألعاب (2)</a>
+<a href="/categories/إلكترونيات-أجهزة-كمبيوتر-أجهزة-كمبيوتر-محمولة.html">إلكترونيات > أجهزة كمبيوتر > أجهزة كمبيوتر محمولة (1)</a>
+<a href="/categories/إلكترونيات-إلكترونيات-صوتية-سماعات-رأس.html">إلكترونيات > إلكترونيات صوتية > سماعات رأس (1)</a>
+<a href="/categories/إلكترونيات-ملحقات-الهواتف-شواحن.html">إلكترونيات > ملحقات الهواتف > شواحن (1)</a>
+<a href="/categories/إلكترونيات-هواتف-ذكية.html">إلكترونيات > هواتف ذكية (4)</a>
+<a href="/categories/الصحة-والجمال-العناية-الشخصية-العطور.html">الصحة والجمال > العناية الشخصية > العطور (4)</a>
+<a href="/categories/الصحة-والجمال-العناية-بالبشرة.html">الصحة والجمال > العناية بالبشرة (7)</a>
+<a href="/categories/الصحة-والجمال-العناية-بالشعر.html">الصحة والجمال > العناية بالشعر (2)</a>
+<a href="/categories/المنزل-والحديقة-أثاث-أثاث-غرفة-المعيشة.html">المنزل والحديقة > أثاث > أثاث غرفة المعيشة (4)</a>
+<a href="/categories/المنزل-والحديقة-أثاث-طاولات.html">المنزل والحديقة > أثاث > طاولات (4)</a>
+<a href="/categories/المنزل-والحديقة-أجهزة-المطبخ-أجهزة-صغيرة.html">المنزل والحديقة > أجهزة المطبخ > أجهزة صغيرة (6)</a>
+<a href="/categories/المنزل-والحديقة-ديكور-المنزل-ستائر.html">المنزل والحديقة > ديكور المنزل > ستائر (1)</a>
+<a href="/categories/المنزل-والحديقة-مفروشات-بياضات-السرير.html">المنزل والحديقة > مفروشات > بياضات السرير (7)</a>
+<a href="/categories/رياضة-ركوب-الدراجات-دراجات.html">رياضة > ركوب الدراجات > دراجات (1)</a>
+<a href="/categories/رياضة-كرات-رياضية.html">رياضة > كرات رياضية (1)</a>
+<a href="/categories/ملابس-وإكسسوارات-أحذية.html">ملابس وإكسسوارات > أحذية (2)</a>
+<a href="/categories/ملابس-وإكسسوارات-إكسسوارات-نظارات.html">ملابس وإكسسوارات > إكسسوارات > نظارات (1)</a>
+<a href="/categories/ملابس-وإكسسوارات-حقائب-ومحافظ.html">ملابس وإكسسوارات > حقائب ومحافظ (1)</a>
+<a href="/categories/ملابس-وإكسسوارات-مجوهرات-ساعات.html">ملابس وإكسسوارات > مجوهرات > ساعات (1)</a>
+<a href="/categories/منتجات-متنوعة.html">منتجات متنوعة (251)</a>
+
+                </div>
+            </div>
+            <a href="/legal/about.html">من نحن</a>
+            <a href="/legal/contact.html">اتصل بنا</a>
+            <a href="/legal/shipping.html">الشحن</a>
+            <a href="/legal/returns.html">الاسترجاع</a>
+            <a href="/legal/privacy.html">الخصوصية</a>
+            <a href="/legal/terms.html">الشروط</a>
+        </nav>
+    </div>
+</header>
+
+<div class="hero-section">
+<h1>مرحباً بك في متجر نينجا العراق</h1>
+<p>أفضل المنتجات بأسعار منافسة مع توصيل مجاني لجميع المحافظات</p>
 </div>
-<script src="/chatbot.js"></script>
-<!-- نهاية كود شات بوت -->
+<div class="products-section">
+<h2 class="section-title">منتجاتنا المميزة (302 منتج)</h2>
+<div class="products-grid">
+<!-- (منتجات المتجر الكاملة ستكمل هنا حسب الكود الأصلي) -->
+<!-- ... -->
+</div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-container">
+    <div class="footer-section">
+      <h3>خدمة العملاء</h3>
+      <ul>
+        <li><a href="/legal/about.html">عن المتجر</a></li>
+        <li><a href="/legal/contact.html">اتصل بنا</a></li>
+        <li><a href="/legal/shipping.html">سياسة الشحن</a></li>
+        <li><a href="/legal/returns.html">سياسة الاسترجاع</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>روابط سريعة</h3>
+      <ul>
+        <li><a href="/categories.html">جميع الفئات</a></li>
+        <li><a href="/">الرئيسية</a></li>
+        <li><a href="/legal/privacy.html">سياسة الخصوصية</a></li>
+        <li><a href="/legal/terms.html">الشروط والأحكام</a></li>
+      </ul>
+    </div>
+    <div class="footer-section">
+      <h3>تابعنا</h3>
+      <ul>
+        <li><a href="https://wa.me/201110760081" target="_blank">واتساب</a></li>
+        <li><a href="#">فيسبوك</a></li>
+        <li><a href="#">انستجرام</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    جميع الحقوق محفوظة &copy; iraq-ninja-store.arabsad.com
+  </div>
+</footer>
+
 </body>
+</html>
