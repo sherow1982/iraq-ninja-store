@@ -1,0 +1,111 @@
+name: Generate Product RSS Feed
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # كل 6 ساعات
+  workflow_dispatch:
+  push:
+    paths:
+      - 'products.json'
+
+jobs:
+  generate-rss:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Generate RSS Feed
+      run: |
+        python << 'EOF'
+import json
+import re
+from datetime import datetime, timedelta
+import xml.etree.ElementTree as ET
+
+# قراءة المنتجات
+with open('products.json', 'r', encoding='utf-8') as f:
+    products = json.load(f)
+
+# قراءة أو إنشاء ملف التتبع
+import os
+if os.path.exists('posted_products.json'):
+    with open('posted_products.json', 'r') as f:
+        tracking = json.load(f)
+else:
+    tracking = {'last_index': -1, 'posted_items': []}
+
+# اختيار آخر 10 منتجات
+start_idx = max(0, tracking['last_index'] - 9)
+end_idx = tracking['last_index'] + 1
+recent_products = products[start_idx:end_idx] if end_idx > 0 else [products[0]]
+
+def create_slug(title, sku):
+    sku_clean = re.sub(r'^[Aa]\.', '', sku).lower()
+    title_slug = re.sub(r'\s+', '-', title.strip())
+    title_slug = re.sub(r'[^\u0600-\u06FF\-]', '', title_slug)
+    title_slug = re.sub(r'-+', '-', title_slug).strip('-')
+    return f"{title_slug}-{sku_clean}.html"
+
+def create_hashtag(title):
+    hashtag = re.sub(r'\s+', '_', title.strip())
+    hashtag = re.sub(r'[^\u0600-\u06FF_a-zA-Z0-9]', '', hashtag)
+    hashtag = re.sub(r'_+', '_', hashtag).strip('_')
+    return f'#{hashtag}'
+
+# إنشاء RSS
+rss = ET.Element('rss', version='2.0')
+rss.set('xmlns:atom', 'http://www.w3.org/2005/Atom')
+channel = ET.SubElement(rss, 'channel')
+
+ET.SubElement(channel, 'title').text = 'Iraq Ninja Store - منتجات جديدة'
+ET.SubElement(channel, 'link').text = 'https://iraq-ninja-store.arabsad.com'
+ET.SubElement(channel, 'description').text = 'أحدث المنتجات في متجر نينجا العراق'
+ET.SubElement(channel, 'language').text = 'ar'
+
+iraq_cities = '#بغداد #البصرة #الموصل #أربيل #كربلاء #النجف #السليمانية #الأنبار #ديالى #ذي_قار #واسط #صلاح_الدين #بابل #كركوك #القادسية #ميسان #المثنى #دهوك'
+
+for i, product in enumerate(reversed(recent_products)):
+    item = ET.SubElement(channel, 'item')
+    
+    slug = create_slug(product['title'], product['sku'])
+    url = f"https://iraq-ninja-store.arabsad.com/products/{slug}"
+    hashtag = create_hashtag(product['title'])
+    
+    ET.SubElement(item, 'title').text = product['title']
+    ET.SubElement(item, 'link').text = url
+    ET.SubElement(item, 'guid').text = url
+    
+    description = f"""{product['title']}
+
+{hashtag} #العراق {iraq_cities}
+
+{url}"""
+    
+    ET.SubElement(item, 'description').text = description
+    ET.SubElement(item, 'enclosure', url=product['image_link'], type='image/jpeg')
+    
+    pub_date = (datetime.now() - timedelta(hours=i*6)).strftime('%a, %d %b %Y %H:%M:%S +0000')
+    ET.SubElement(item, 'pubDate').text = pub_date
+
+# حفظ RSS
+tree = ET.ElementTree(rss)
+ET.indent(tree, space='  ')
+tree.write('rss-feed.xml', encoding='utf-8', xml_declaration=True)
+
+print('✅ تم إنشاء RSS feed بنجاح!')
+EOF
+    
+    - name: Commit RSS feed
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add rss-feed.xml
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update RSS feed [skip ci]"
+        git push
