@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Twitter Auto-Post Bot for Iraq Ninja Store
-Tweets random product with shortened URLs and product images
+Tweets random product with image, shortened URL, and comprehensive hashtags
 """
 import json
 import random
@@ -12,6 +12,7 @@ from datetime import datetime
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse, unquote, quote
 import tempfile
+import re
 
 # Twitter API v2 Configuration
 API_KEY = os.getenv('TWITTER_API_KEY', '')
@@ -23,6 +24,13 @@ TWITTER_UPLOAD_URL = "https://upload.twitter.com/1.1/media/upload.json"
 
 SITEMAP_URL = 'https://iraq-ninja-store.arabsad.com/sitemap.xml'
 SITE_BASE = 'https://iraq-ninja-store.arabsad.com/products/'
+
+# هاشتاجات محافظات العراق
+IRAQ_PROVINCES = [
+    '#بغداد', '#البصرة', '#الموصل', '#أربيل', '#كركوك', '#النجف',
+    '#كربلاء', '#السليمانية', '#الأنبار', '#ديالى', '#دهوك',
+    '#بابل', '#ذي_قار', '#واسط', '#ميسان', '#المثنى', '#القادسية', '#صلاح_الدين'
+]
 
 
 def load_products(file_path='products.json'):
@@ -92,34 +100,46 @@ def shorten_url(long_url):
         return long_url
 
 
+def create_product_hashtag(product_title):
+    """إنشاء هاشتاج من اسم المنتج"""
+    # إزالة الرموز الخاصة والأرقام والحروف الإنجليزية
+    clean_title = re.sub(r'[a-zA-Z0-9\-_.،؛!؟()\[\]{}"\']', '', product_title)
+    # تحويل المسافات إلى underscore
+    hashtag = clean_title.strip().replace(' ', '_')
+    # تحديد بحد أقصى 3 كلمات
+    words = hashtag.split('_')[:3]
+    hashtag = '_'.join(words)
+    return f"#{hashtag}" if hashtag else ""
+
+
 def upload_image(image_url, auth):
-    """تحميل صورة المنتج على Twitter"""
+    """تحميل صورة المنتج على Twitter باستخدام API v1.1"""
     try:
         print(f"⏳ جاري تحميل الصورة من: {image_url}")
-        img_resp = requests.get(image_url, timeout=15)
+        
+        # تحميل الصورة
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        img_resp = requests.get(image_url, timeout=15, headers=headers)
         img_resp.raise_for_status()
         
-        # حفظ مؤقت
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
-            tmp.write(img_resp.content)
-            tmp_path = tmp.name
+        print(f"✓ تم تحميل الصورة ({len(img_resp.content)} بايت)")
         
-        # رفع على Twitter
-        with open(tmp_path, 'rb') as img:
-            files = {'media': img}
-            upload_resp = requests.post(TWITTER_UPLOAD_URL, auth=auth, files=files)
-        
-        os.unlink(tmp_path)
+        # رفع مباشر على Twitter
+        files = {'media': ('product.jpg', img_resp.content, 'image/jpeg')}
+        upload_resp = requests.post(TWITTER_UPLOAD_URL, auth=auth, files=files)
         
         if upload_resp.status_code == 200:
             media_id = upload_resp.json().get('media_id_string')
-            print(f"✓ تم رفع صورة المنتج (ID: {media_id})")
+            print(f"✓ تم رفع صورة المنتج بنجاح (Media ID: {media_id})")
             return media_id
         else:
-            print(f"✗ فشل رفع الصورة: {upload_resp.status_code} - {upload_resp.text}")
+            print(f"✗ فشل رفع الصورة: {upload_resp.status_code}")
+            print(f"  التفاصيل: {upload_resp.text}")
             return None
     except Exception as e:
         print(f"✗ خطأ في رفع الصورة: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 
@@ -136,9 +156,7 @@ def format_tweet(product, url_map):
     tweet_parts.append(f"🛒 {product.get('title', 'منتج مميز')}")
     
     if discount > 0:
-        tweet_parts.append(f"\n💰 السعر: {price_iqd}")
-        tweet_parts.append(f" ❌ بدلاً من: {original_price_iqd}")
-        tweet_parts.append(f" 🔥 خصم {discount}%")
+        tweet_parts.append(f"\n💰 السعر: {price_iqd} ❌ بدلاً من: {original_price_iqd} 🔥 خصم {discount}%")
     else:
         tweet_parts.append(f"\n💰 السعر: {price_iqd}")
     
@@ -148,11 +166,42 @@ def format_tweet(product, url_map):
         short_url = shorten_url(long_url)
         tweet_parts.append(f"\n\n🔗 {short_url}")
     
-    tweet_parts.append("\n\n#العراق #تسوق_اونلاين #عروض #تخفيضات")
+    # إضافة هاشتاج اسم المنتج
+    product_hashtag = create_product_hashtag(product.get('title', ''))
+    
+    # هاشتاجات عامة
+    general_tags = ['#العراق', '#تسوق_اونلاين', '#عروض', '#تخفيضات']
+    
+    # اختيار عشوائي من 5-7 محافظات
+    num_provinces = random.randint(5, 7)
+    selected_provinces = random.sample(IRAQ_PROVINCES, num_provinces)
+    
+    # دمج الهاشتاجات
+    all_hashtags = []
+    if product_hashtag:
+        all_hashtags.append(product_hashtag)
+    all_hashtags.extend(general_tags)
+    all_hashtags.extend(selected_provinces)
+    
+    tweet_parts.append(f"\n\n{' '.join(all_hashtags)}")
+    
     tweet_text = "".join(tweet_parts)
     
+    # التحقق من طول التغريدة
     if len(tweet_text) > 280:
-        tweet_text = tweet_text[:277] + "..."
+        # تقليل عدد المحافظات
+        selected_provinces = random.sample(IRAQ_PROVINCES, 3)
+        all_hashtags = []
+        if product_hashtag:
+            all_hashtags.append(product_hashtag)
+        all_hashtags.extend(general_tags)
+        all_hashtags.extend(selected_provinces)
+        
+        tweet_parts[-1] = f"\n\n{' '.join(all_hashtags)}"
+        tweet_text = "".join(tweet_parts)
+        
+        if len(tweet_text) > 280:
+            tweet_text = tweet_text[:277] + "..."
     
     return tweet_text
 
@@ -170,6 +219,8 @@ def post_tweet(tweet_text, product):
         media_id = None
         if product.get('image'):
             media_id = upload_image(product['image'], auth)
+        else:
+            print("⚠ لا توجد صورة للمنتج")
         
         # إنشاء التغريدة
         payload = {"text": tweet_text}
@@ -195,6 +246,8 @@ def post_tweet(tweet_text, product):
         return False
     except Exception as e:
         print(f"✗ خطأ في النشر: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -222,6 +275,8 @@ def main():
     print(f"\n📦 المنتج المختار: {product.get('title')}")
     if product.get('image'):
         print(f"🖼  رابط الصورة: {product.get('image')}")
+    else:
+        print("⚠  تحذير: المنتج لا يحتوي على صورة")
     
     tweet_text = format_tweet(product, url_map)
     
@@ -230,6 +285,7 @@ def main():
     print("-" * 50)
     print(tweet_text)
     print("-" * 50)
+    print(f"الطول: {len(tweet_text)} حرف")
     
     success = post_tweet(tweet_text, product)
     
