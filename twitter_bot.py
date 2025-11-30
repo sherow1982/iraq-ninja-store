@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Twitter Auto-Post Bot for Iraq Ninja Store
-Tweets random product from products.json using REAL URLs pulled live from https://iraq-ninja-store.arabsad.com/sitemap.xml
+Tweets random product from products.json using REAL URLs pulled live from sitemap + product image
 """
 import json
 import random
@@ -10,7 +10,8 @@ import requests
 import os
 from datetime import datetime
 import xml.etree.ElementTree as ET
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, unquote, quote
+import tempfile
 
 # Twitter API v2 Configuration
 API_KEY = os.getenv('TWITTER_API_KEY', '')
@@ -18,6 +19,7 @@ API_KEY_SECRET = os.getenv('TWITTER_API_KEY_SECRET', '')
 ACCESS_TOKEN = os.getenv('TWITTER_ACCESS_TOKEN', '')
 ACCESS_TOKEN_SECRET = os.getenv('TWITTER_ACCESS_TOKEN_SECRET', '')
 TWITTER_API_URL = "https://api.twitter.com/2/tweets"
+TWITTER_UPLOAD_URL = "https://upload.twitter.com/1.1/media/upload.json"
 
 SITEMAP_URL = 'https://iraq-ninja-store.arabsad.com/sitemap.xml'
 SITE_BASE = 'https://iraq-ninja-store.arabsad.com/products/'
@@ -52,7 +54,6 @@ def fetch_url_map():
             if loc is not None and loc.text and loc.text.startswith(SITE_BASE):
                 parsed = urlparse(loc.text)
                 path = unquote(parsed.path)
-                # extract slug (between /products/ and .html)
                 if path.endswith('.html'):
                     slug = path.split('/products/')[-1].replace('.html', '').replace('-', ' ')
                     slug = slug.replace('ـ','').strip()
@@ -64,16 +65,45 @@ def fetch_url_map():
 
 
 def find_product_url(product, url_map):
-    # التطابق عن طريق عنوان المنتج normalized
     product_title = product.get('title', '').replace('-', ' ').replace('ـ','').replace('%20',' ').strip()
     for k in url_map.keys():
         if product_title == k:
             return url_map[k]
-    # fallback: بحث جزئي لو فيه اختلاف بسيط
     for k in url_map.keys():
         if product_title in k or k in product_title:
             return url_map[k]
     return ''
+
+
+def upload_image(image_url, auth):
+    """تحميل صورة المنتج على Twitter"""
+    try:
+        # تحميل الصورة
+        img_resp = requests.get(image_url, timeout=10)
+        img_resp.raise_for_status()
+        
+        # حفظ مؤقت
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+            tmp.write(img_resp.content)
+            tmp_path = tmp.name
+        
+        # رفع على Twitter
+        with open(tmp_path, 'rb') as img:
+            files = {'media': img}
+            upload_resp = requests.post(TWITTER_UPLOAD_URL, auth=auth, files=files)
+            
+        os.unlink(tmp_path)
+        
+        if upload_resp.status_code == 200:
+            media_id = upload_resp.json().get('media_id_string')
+            print(f"✓ تم رفع صورة المنتج (ID: {media_id})")
+            return media_id
+        else:
+            print(f"✗ فشل رفع الصورة: {upload_resp.status_code}")
+            return None
+    except Exception as e:
+        print(f"✗ خطأ في رفع الصورة: {e}")
+        return None
 
 
 def format_tweet(product, url_map):
@@ -91,19 +121,21 @@ def format_tweet(product, url_map):
         tweet_parts.append(f"🔥 خصم {discount}%")
     else:
         tweet_parts.append(f"\n💰 السعر: {price_iqd}")
+    
     url = find_product_url(product, url_map)
     if url:
         tweet_parts.append(f"\n\n🔗 {url}")
-    else:
-        tweet_parts.append("\n\n🔗 رابط المنتج غير متوفر")
+    
     tweet_parts.append("\n\n#العراق #تسوق_اونلاين #عروض #تخفيضات")
     tweet_text = "".join(tweet_parts)
+    
     if len(tweet_text) > 280:
         tweet_text = tweet_text[:277] + "..."
+    
     return tweet_text
 
 
-def post_tweet(tweet_text):
+def post_tweet(tweet_text, product):
     if not all([API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET]):
         print("✗ خطأ: مفاتيح Twitter API غير موجودة")
         print("قم بتعيين المتغيرات البيئية:")
@@ -115,8 +147,19 @@ def post_tweet(tweet_text):
     try:
         from requests_oauthlib import OAuth1
         auth = OAuth1(API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
+        
+        # رفع صورة المنتج
+        media_id = None
+        if product.get('image'):
+            media_id = upload_image(product['image'], auth)
+        
+        # إنشاء التغريدة
         payload = {"text": tweet_text}
+        if media_id:
+            payload["media"] = {"media_ids": [media_id]}
+        
         response = requests.post(TWITTER_API_URL, auth=auth, json=payload, headers={"Content-Type": "application/json"})
+        
         if response.status_code == 201:
             tweet_data = response.json()
             tweet_id = tweet_data.get('data', {}).get('id')
@@ -139,7 +182,7 @@ def post_tweet(tweet_text):
 
 def main():
     print("=" * 50)
-    print("Twitter Auto-Post Bot - Iraq Ninja Store (sitemap live URLs)")
+    print("Twitter Auto-Post Bot - Iraq Ninja Store (w/ images)")
     print(f"التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
     products = load_products()
@@ -160,7 +203,7 @@ def main():
     print("-" * 50)
     print(tweet_text)
     print("-" * 50)
-    success = post_tweet(tweet_text)
+    success = post_tweet(tweet_text, product)
     if success:
         print("\n✓ تمت العملية بنجاح!")
     else:
