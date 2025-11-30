@@ -2,26 +2,28 @@
 # -*- coding: utf-8 -*-
 """
 Twitter Auto-Post Bot for Iraq Ninja Store
-Automatically tweets random products from products.json
+Tweets random product from products.json using REAL URLs pulled live from https://iraq-ninja-store.arabsad.com/sitemap.xml
 """
-
 import json
 import random
 import requests
 import os
 from datetime import datetime
+import xml.etree.ElementTree as ET
+from urllib.parse import urlparse, unquote
 
 # Twitter API v2 Configuration
-API_KEY = os.getenv('TWITTER_API_KEY', '')  # من المتغيرات البيئية
+API_KEY = os.getenv('TWITTER_API_KEY', '')
 API_KEY_SECRET = os.getenv('TWITTER_API_KEY_SECRET', '')
 ACCESS_TOKEN = os.getenv('TWITTER_ACCESS_TOKEN', '')
 ACCESS_TOKEN_SECRET = os.getenv('TWITTER_ACCESS_TOKEN_SECRET', '')
-
-# Twitter API v2 endpoint
 TWITTER_API_URL = "https://api.twitter.com/2/tweets"
 
+SITEMAP_URL = 'https://iraq-ninja-store.arabsad.com/sitemap.xml'
+SITE_BASE = 'https://iraq-ninja-store.arabsad.com/products/'
+
+
 def load_products(file_path='products.json'):
-    """تحميل المنتجات من ملف JSON"""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             products = json.load(f)
@@ -31,60 +33,77 @@ def load_products(file_path='products.json'):
         print(f"✗ خطأ في تحميل المنتجات: {e}")
         return []
 
+
 def select_random_product(products):
-    """اختيار منتج عشوائي"""
     if not products:
         return None
-    product = random.choice(products)
-    print(f"✓ تم اختيار: {product['title']}")
-    return product
+    return random.choice(products)
 
-def format_tweet(product):
-    """تنسيق التغريدة من بيانات المنتج"""
-    
-    # حساب نسبة الخصم
+
+def fetch_url_map():
+    url_map = {}
+    try:
+        resp = requests.get(SITEMAP_URL, timeout=15)
+        resp.raise_for_status()
+        tree = ET.fromstring(resp.text)
+        ns = {'n': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+        for url in tree.findall('n:url', ns):
+            loc = url.find('n:loc', ns)
+            if loc is not None and loc.text and loc.text.startswith(SITE_BASE):
+                parsed = urlparse(loc.text)
+                path = unquote(parsed.path)
+                # extract slug (between /products/ and .html)
+                if path.endswith('.html'):
+                    slug = path.split('/products/')[-1].replace('.html', '').replace('-', ' ')
+                    slug = slug.replace('ـ','').strip()
+                    url_map[slug] = loc.text
+        print(f"✓ تم سحب روابط المنتجات ({len(url_map)}) من السايت ماب")
+    except Exception as e:
+        print(f"✗ خطأ قراءة sitemap من الموقع: {e}")
+    return url_map
+
+
+def find_product_url(product, url_map):
+    # التطابق عن طريق عنوان المنتج normalized
+    product_title = product.get('title', '').replace('-', ' ').replace('ـ','').replace('%20',' ').strip()
+    for k in url_map.keys():
+        if product_title == k:
+            return url_map[k]
+    # fallback: بحث جزئي لو فيه اختلاف بسيط
+    for k in url_map.keys():
+        if product_title in k or k in product_title:
+            return url_map[k]
+    return ''
+
+
+def format_tweet(product, url_map):
     if product.get('price') and product.get('sale_price'):
         discount = round(((product['price'] - product['sale_price']) / product['price']) * 100)
     else:
         discount = 0
-    
-    # تنسيق السعر
     price_iqd = f"{int(product.get('sale_price', 0)):,} د.ع"
     original_price_iqd = f"{int(product.get('price', 0)):,} د.ع" if discount > 0 else ""
-    
-    # بناء التغريدة
     tweet_parts = []
-    
-    # العنوان
     tweet_parts.append(f"🛒 {product.get('title', 'منتج مميز')}")
-    
-    # السعر والخصم
     if discount > 0:
         tweet_parts.append(f"\n💰 السعر: {price_iqd}")
         tweet_parts.append(f"❌ بدلاً من: {original_price_iqd}")
         tweet_parts.append(f"🔥 خصم {discount}%")
     else:
         tweet_parts.append(f"\n💰 السعر: {price_iqd}")
-    
-    # رابط المنتج
-    product_url = f"https://sherow1982.github.io/iraq-ninja-store/#{product.get('id', '')}"
-    tweet_parts.append(f"\n\n🔗 {product_url}")
-    
-    # هاشتاجات
+    url = find_product_url(product, url_map)
+    if url:
+        tweet_parts.append(f"\n\n🔗 {url}")
+    else:
+        tweet_parts.append("\n\n🔗 رابط المنتج غير متوفر")
     tweet_parts.append("\n\n#العراق #تسوق_اونلاين #عروض #تخفيضات")
-    
     tweet_text = "".join(tweet_parts)
-    
-    # التأكد من عدم تجاوز حد تويتر (280 حرف)
     if len(tweet_text) > 280:
-        # تقليص الوصف إذا كان طويل
         tweet_text = tweet_text[:277] + "..."
-    
     return tweet_text
 
+
 def post_tweet(tweet_text):
-    """نشر التغريدة على Twitter باستخدام API v2"""
-    
     if not all([API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET]):
         print("✗ خطأ: مفاتيح Twitter API غير موجودة")
         print("قم بتعيين المتغيرات البيئية:")
@@ -93,29 +112,11 @@ def post_tweet(tweet_text):
         print("  TWITTER_ACCESS_TOKEN")
         print("  TWITTER_ACCESS_TOKEN_SECRET")
         return False
-    
     try:
-        # إنشاء OAuth 1.0a authentication
         from requests_oauthlib import OAuth1
-        
-        auth = OAuth1(
-            API_KEY,
-            API_KEY_SECRET,
-            ACCESS_TOKEN,
-            ACCESS_TOKEN_SECRET
-        )
-        
-        # البيانات المراد نشرها
+        auth = OAuth1(API_KEY, API_KEY_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
         payload = {"text": tweet_text}
-        
-        # إرسال الطلب
-        response = requests.post(
-            TWITTER_API_URL,
-            auth=auth,
-            json=payload,
-            headers={"Content-Type": "application/json"}
-        )
-        
+        response = requests.post(TWITTER_API_URL, auth=auth, json=payload, headers={"Content-Type": "application/json"})
         if response.status_code == 201:
             tweet_data = response.json()
             tweet_id = tweet_data.get('data', {}).get('id')
@@ -127,50 +128,43 @@ def post_tweet(tweet_text):
             print(f"✗ فشل النشر. كود الخطأ: {response.status_code}")
             print(f"  التفاصيل: {response.text}")
             return False
-            
     except ImportError:
-        print("✗ خطأ: المكتبة requests_oauthlib غير مثبتة")
-        print("قم بتثبيتها: pip install requests-oauthlib")
+        print("✗ خطأ: requests_oauthlib غير مثبتة")
+        print("pip install requests-oauthlib")
         return False
     except Exception as e:
         print(f"✗ خطأ في النشر: {e}")
         return False
 
+
 def main():
-    """الدالة الرئيسية"""
     print("=" * 50)
-    print("Twitter Auto-Post Bot - Iraq Ninja Store")
+    print("Twitter Auto-Post Bot - Iraq Ninja Store (sitemap live URLs)")
     print(f"التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
-    
-    # تحميل المنتجات
     products = load_products()
     if not products:
         print("✗ لا توجد منتجات للنشر")
         return
-    
-    # اختيار منتج عشوائي
+    url_map = fetch_url_map()
+    if not url_map:
+        print("✗ لم يتم جلب روابط المنتجات")
+        return
     product = select_random_product(products)
     if not product:
         print("✗ فشل اختيار المنتج")
         return
-    
-    # تنسيق التغريدة
-    tweet_text = format_tweet(product)
+    tweet_text = format_tweet(product, url_map)
     print("\n" + "-" * 50)
     print("التغريدة:")
     print("-" * 50)
     print(tweet_text)
     print("-" * 50)
-    
-    # نشر التغريدة
     success = post_tweet(tweet_text)
-    
     if success:
         print("\n✓ تمت العملية بنجاح!")
     else:
         print("\n✗ فشلت العملية")
-    
     print("=" * 50)
 
 if __name__ == "__main__":
