@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Twitter Auto-Post Bot for Iraq Ninja Store
-Posts random products with images using tweepy
+Posts random products with images using Twitter API v2
 """
 import os
 import random
@@ -20,6 +20,7 @@ API_KEY = os.getenv("TWITTER_API_KEY")
 API_SECRET = os.getenv("TWITTER_API_KEY_SECRET") or os.getenv("TWITTER_API_SECRET")
 ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN")
 ACCESS_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET") or os.getenv("TWITTER_ACCESS_SECRET")
+BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
 
 if not all([API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET]):
     print("✗ خطأ: مفاتيح Twitter API غير موجودة")
@@ -31,11 +32,19 @@ if not all([API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET]):
     raise SystemExit(1)
 
 # ==============================
-# إعداد عميل تويتر (tweepy)
+# إعداد عميل تويتر
 # ==============================
 
 auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
-api_v1 = tweepy.API(auth)
+api_v1 = tweepy.API(auth)  # للـ media upload فقط
+
+# Client v2 للنشر
+client = tweepy.Client(
+    consumer_key=API_KEY,
+    consumer_secret=API_SECRET,
+    access_token=ACCESS_TOKEN,
+    access_token_secret=ACCESS_SECRET
+)
 
 # ==============================
 # إعدادات عامة
@@ -100,13 +109,47 @@ def normalize_slug(name):
     slug = slug.replace(" ", "-")
     return slug
 
+def extract_image_url(product):
+    """استخراج رابط الصورة من بيانات المنتج"""
+    # محاولات متعددة للحصول على الصورة
+    image = None
+    
+    # 1. البحث في المفاتيح المباشرة
+    if product.get("image"):
+        image = product["image"]
+    elif product.get("image_url"):
+        image = product["image_url"]
+    elif product.get("featured_image"):
+        image = product["featured_image"]
+    
+    # 2. البحث في مصفوفة الصور
+    if not image and product.get("images"):
+        images = product["images"]
+        if isinstance(images, list) and len(images) > 0:
+            if isinstance(images[0], dict):
+                image = images[0].get("src") or images[0].get("url")
+            else:
+                image = images[0]
+    
+    # 3. البحث في variants
+    if not image and product.get("variants"):
+        variants = product["variants"]
+        if isinstance(variants, list) and len(variants) > 0:
+            variant = variants[0]
+            if isinstance(variant, dict):
+                image = variant.get("image") or variant.get("image_url")
+    
+    return image if image else ""
+
 def choose_random_product(products, sitemap_links):
     product = random.choice(products)
 
     name = product.get("name") or product.get("title") or "منتج بدون اسم"
     price = product.get("price") or product.get("sale_price") or ""
     old_price = product.get("old_price") or product.get("compare_at_price") or ""
-    image_url = product.get("image") or product.get("image_url") or ""
+    
+    # استخراج الصورة
+    image_url = extract_image_url(product)
 
     slug_guess = normalize_slug(name)
     encoded_slug = quote(slug_guess, safe="-")
@@ -222,7 +265,7 @@ def upload_media_to_twitter(image_path):
         print(f"⏳ جاري رفع الصورة إلى تويتر: {image_path}")
         media = api_v1.media_upload(image_path)
         print(f"✓ تم رفع صورة المنتج بنجاح (Media ID: {media.media_id})")
-        return media.media_id
+        return str(media.media_id)
     except Exception as e:
         print(f"✗ خطأ أثناء رفع الصورة إلى تويتر: {e}")
         import traceback
@@ -244,11 +287,23 @@ def build_tweet_text(product):
     lines = []
     lines.append(f"🛒 {name}")
 
+    # تنسيق السعر
+    try:
+        price_float = float(str(price).replace(",", ""))
+        price_formatted = f"{int(price_float):,}".replace(",", ",")
+    except:
+        price_formatted = str(price)
+
     price_line = ""
     if price:
-        price_line += f"💰 السعر: {price} د.ع"
+        price_line += f"💰 السعر: {price_formatted} د.ع"
     if old_price:
-        price_line += f" ❌ بدلاً من: {old_price} د.ع"
+        try:
+            old_price_float = float(str(old_price).replace(",", ""))
+            old_price_formatted = f"{int(old_price_float):,}".replace(",", ",")
+        except:
+            old_price_formatted = str(old_price)
+        price_line += f" ❌ بدلاً من: {old_price_formatted} د.ع"
     if discount:
         price_line += f" 🔥 خصم {discount}%"
 
@@ -289,14 +344,15 @@ def post_tweet_with_image(text, media_id=None):
     try:
         if media_id:
             print("⏳ جاري نشر التغريدة مع الصورة...")
-            status = api_v1.update_status(status=text, media_ids=[media_id])
+            response = client.create_tweet(text=text, media_ids=[media_id])
         else:
             print("⏳ جاري نشر التغريدة بدون صورة...")
-            status = api_v1.update_status(status=text)
+            response = client.create_tweet(text=text)
 
+        tweet_id = response.data['id']
         print("✓ تم نشر التغريدة بنجاح!")
-        print(f"Tweet ID: {status.id}")
-        print(f"الرابط: https://twitter.com/user/status/{status.id}")
+        print(f"Tweet ID: {tweet_id}")
+        print(f"الرابط: https://twitter.com/user/status/{tweet_id}")
         return True
     except Exception as e:
         print(f"✗ خطأ أثناء نشر التغريدة: {e}")
