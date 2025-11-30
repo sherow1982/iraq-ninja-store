@@ -2,8 +2,8 @@ name: Twitter Auto-Post Bot
 
 on:
   schedule:
-    # يشتغل كل يوم الساعة 12 ظهراً و 6 مساءً (UTC)
-    - cron: '0 10,16 * * *'
+    # يشتغل كل 8 ساعات (3 مرات يومياً = 90 منشور/شهر)
+    - cron: '0 */8 * * *'
   
   workflow_dispatch:
 
@@ -33,3 +33,11 @@ jobs:
         TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_SECRET }}
       run: |
         python twitter_bot.py
+    
+    - name: Commit tracking file
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add posted_products.json || true
+        git commit -m "Update posted products tracking [skip ci]" || true
+        git push || true
