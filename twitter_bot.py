@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Twitter Auto-Post Bot for Iraq Ninja Store
-Posts random products with images using Twitter API v2
+Posts 95 products per month, cycles through all products
 """
 import os
 import random
@@ -20,15 +20,9 @@ API_KEY = os.getenv("TWITTER_API_KEY")
 API_SECRET = os.getenv("TWITTER_API_KEY_SECRET") or os.getenv("TWITTER_API_SECRET")
 ACCESS_TOKEN = os.getenv("TWITTER_ACCESS_TOKEN")
 ACCESS_SECRET = os.getenv("TWITTER_ACCESS_TOKEN_SECRET") or os.getenv("TWITTER_ACCESS_SECRET")
-BEARER_TOKEN = os.getenv("TWITTER_BEARER_TOKEN", "")
 
 if not all([API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET]):
     print("✗ خطأ: مفاتيح Twitter API غير موجودة")
-    print("قم بتعيين المتغيرات البيئية:")
-    print("  TWITTER_API_KEY")
-    print("  TWITTER_API_KEY_SECRET")
-    print("  TWITTER_ACCESS_TOKEN")
-    print("  TWITTER_ACCESS_TOKEN_SECRET")
     raise SystemExit(1)
 
 # ==============================
@@ -36,9 +30,8 @@ if not all([API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET]):
 # ==============================
 
 auth = tweepy.OAuth1UserHandler(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_SECRET)
-api_v1 = tweepy.API(auth)  # للـ media upload فقط
+api_v1 = tweepy.API(auth)
 
-# Client v2 للنشر
 client = tweepy.Client(
     consumer_key=API_KEY,
     consumer_secret=API_SECRET,
@@ -53,13 +46,40 @@ client = tweepy.Client(
 BASE_URL = "https://iraq-ninja-store.arabsad.com"
 SITEMAP_URL = f"{BASE_URL}/sitemap.xml"
 PRODUCTS_JSON_PATH = "products.json"
+TRACKING_FILE = "posted_products.json"
+MAX_POSTS_PER_MONTH = 95
 
-# المحافظات
 IRAQ_GOVS = [
     "بغداد", "البصرة", "الموصل", "أربيل", "كركوك", "النجف",
     "كربلاء", "السليمانية", "الأنبار", "ديالى", "دهوك",
     "بابل", "ذي_قار", "واسط", "ميسان", "المثنى", "القادسية", "صلاح_الدين"
 ]
+
+def load_tracking():
+    """تحميل سجل المنتجات المنشورة"""
+    if not os.path.exists(TRACKING_FILE):
+        return {
+            "posted_products": [],
+            "current_month": datetime.now().strftime("%Y-%m"),
+            "posts_this_month": 0,
+            "cycle_count": 0
+        }
+    
+    with open(TRACKING_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    
+    current_month = datetime.now().strftime("%Y-%m")
+    if data.get("current_month") != current_month:
+        print(f"📅 شهر جديد! إعادة تعيين العداد.")
+        data["current_month"] = current_month
+        data["posts_this_month"] = 0
+    
+    return data
+
+def save_tracking(data):
+    """حفظ سجل المنتجات المنشورة"""
+    with open(TRACKING_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 def load_products():
     if not os.path.exists(PRODUCTS_JSON_PATH):
@@ -69,11 +89,7 @@ def load_products():
     with open(PRODUCTS_JSON_PATH, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    if isinstance(data, list):
-        products = data
-    else:
-        products = data
-
+    products = data if isinstance(data, list) else data
     print(f"✓ تم تحميل {len(products)} منتج")
     return products
 
@@ -111,10 +127,8 @@ def normalize_slug(name):
 
 def extract_image_url(product):
     """استخراج رابط الصورة من بيانات المنتج"""
-    # محاولات متعددة للحصول على الصورة
     image = None
     
-    # 1. البحث في المفاتيح المباشرة
     if product.get("image"):
         image = product["image"]
     elif product.get("image_url"):
@@ -122,7 +136,6 @@ def extract_image_url(product):
     elif product.get("featured_image"):
         image = product["featured_image"]
     
-    # 2. البحث في مصفوفة الصور
     if not image and product.get("images"):
         images = product["images"]
         if isinstance(images, list) and len(images) > 0:
@@ -131,7 +144,6 @@ def extract_image_url(product):
             else:
                 image = images[0]
     
-    # 3. البحث في variants
     if not image and product.get("variants"):
         variants = product["variants"]
         if isinstance(variants, list) and len(variants) > 0:
@@ -141,14 +153,31 @@ def extract_image_url(product):
     
     return image if image else ""
 
-def choose_random_product(products, sitemap_links):
-    product = random.choice(products)
+def get_product_id(product):
+    """الحصول على معرف فريد للمنتج"""
+    return product.get("id") or product.get("sku") or product.get("name") or product.get("title")
 
+def choose_next_product(products, tracking):
+    """اختيار المنتج التالي بنظام دوري"""
+    posted_ids = set(tracking["posted_products"])
+    
+    # المنتجات التي لم تُنشر بعد
+    unposted = [p for p in products if get_product_id(p) not in posted_ids]
+    
+    if not unposted:
+        print("🔄 تم نشر جميع المنتجات! بدء دورة جديدة...")
+        tracking["posted_products"] = []
+        tracking["cycle_count"] += 1
+        print(f"📊 الدورة رقم: {tracking['cycle_count']}")
+        unposted = products
+    
+    product = random.choice(unposted)
+    return product
+
+def build_product_data(product, sitemap_links):
     name = product.get("name") or product.get("title") or "منتج بدون اسم"
     price = product.get("price") or product.get("sale_price") or ""
     old_price = product.get("old_price") or product.get("compare_at_price") or ""
-    
-    # استخراج الصورة
     image_url = extract_image_url(product)
 
     slug_guess = normalize_slug(name)
@@ -163,6 +192,7 @@ def choose_random_product(products, sitemap_links):
         product_url = f"{BASE_URL}/products/{encoded_slug}.html"
 
     return {
+        "id": get_product_id(product),
         "name": name,
         "price": price,
         "old_price": old_price,
@@ -268,8 +298,6 @@ def upload_media_to_twitter(image_path):
         return str(media.media_id)
     except Exception as e:
         print(f"✗ خطأ أثناء رفع الصورة إلى تويتر: {e}")
-        import traceback
-        traceback.print_exc()
         return None
 
 def build_tweet_text(product):
@@ -287,7 +315,6 @@ def build_tweet_text(product):
     lines = []
     lines.append(f"🛒 {name}")
 
-    # تنسيق السعر
     try:
         price_float = float(str(price).replace(",", ""))
         price_formatted = f"{int(price_float):,}".replace(",", ",")
@@ -366,10 +393,26 @@ def main():
     print(f"التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
 
+    # تحميل سجل التتبع
+    tracking = load_tracking()
+    
+    print(f"📊 إحصائيات الشهر الحالي ({tracking['current_month']}):")
+    print(f"  - المنشورات هذا الشهر: {tracking['posts_this_month']}/{MAX_POSTS_PER_MONTH}")
+    print(f"  - المنتجات المنشورة: {len(tracking['posted_products'])}")
+    print(f"  - رقم الدورة: {tracking['cycle_count']}")
+    print()
+    
+    # التحقق من الحد الأقصى
+    if tracking["posts_this_month"] >= MAX_POSTS_PER_MONTH:
+        print(f"⚠ تم الوصول للحد الأقصى ({MAX_POSTS_PER_MONTH} منشور/شهر)")
+        print("⏸ لن يتم النشر حتى بداية الشهر القادم")
+        return
+    
     products = load_products()
     sitemap_links = fetch_sitemap_links()
 
-    product = choose_random_product(products, sitemap_links)
+    product_raw = choose_next_product(products, tracking)
+    product = build_product_data(product_raw, sitemap_links)
 
     print("")
     print("📦 المنتج المختار:")
@@ -393,8 +436,14 @@ def main():
     success = post_tweet_with_image(tweet_text, media_id=media_id)
 
     if success:
+        # تحديث سجل التتبع
+        tracking["posted_products"].append(product["id"])
+        tracking["posts_this_month"] += 1
+        save_tracking(tracking)
+        
         print("=" * 50)
         print("✓ العملية اكتملت بنجاح")
+        print(f"📊 المنشورات المتبقية هذا الشهر: {MAX_POSTS_PER_MONTH - tracking['posts_this_month']}")
         print("=" * 50)
     else:
         print("=" * 50)
