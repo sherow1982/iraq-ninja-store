@@ -140,7 +140,7 @@ def calc_discount(price, old_price):
         pass
     return None
 
-def shorten_url(url):
+def shorten_url_disabled(url):
     try:
         res = requests.get(f"http://tinyurl.com/api-create.php?url={url}", timeout=10)
         if res.status_code == 200 and res.text.startswith("http"):
@@ -217,7 +217,8 @@ def build_tweet_text(product):
     if price_line:
         lines.append(price_line)
     lines.append("")
-    lines.append(f"🔗 {shorten_url(product['product_url'])}")
+    lines.append(f"🔗 {product['product_url']}")
+    lines.append(f"📱 واتساب: https://wa.me/201110760081")
     lines.append("")
     base_text = "\n".join(lines)
     tags_text = " ".join(build_hashtags(product["name"]))
