@@ -68,19 +68,29 @@ def make_product_key(product):
     return normalize_slug(name)
 
 def extract_image_url(product):
-    if product.get("image"):
-        return product["image"]
-    if product.get("image_url"):
-        return product["image_url"]
-    if product.get("featured_image"):
-        return product["featured_image"]
-    if isinstance(product.get("images"), list) and product["images"]:
-        first = product["images"][0]
+    # ✅ التعديل: إضافة دعم image_link
+    return (product.get("image_link") or 
+            product.get("image") or 
+            product.get("image_url") or 
+            product.get("featured_image") or 
+            _extract_from_images_array(product) or 
+            _extract_from_variants(product) or "")
+
+def _extract_from_images_array(product):
+    """استخراج الصورة من مصفوفة images"""
+    images = product.get("images")
+    if isinstance(images, list) and images:
+        first = images[0]
         if isinstance(first, dict):
             return first.get("src") or first.get("url") or ""
         return first if isinstance(first, str) else ""
-    if isinstance(product.get("variants"), list) and product["variants"]:
-        v0 = product["variants"][0]
+    return ""
+
+def _extract_from_variants(product):
+    """استخراج الصورة من variants"""
+    variants = product.get("variants")
+    if isinstance(variants, list) and variants:
+        v0 = variants[0]
         if isinstance(v0, dict):
             return v0.get("image") or v0.get("image_url") or ""
     return ""
@@ -185,12 +195,14 @@ def download_image(image_url):
         print(f"⏳ جاري تحميل الصورة من: {image_url}")
         resp = requests.get(image_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=20)
         if resp.status_code != 200:
+            print(f"✗ فشل تحميل الصورة (HTTP {resp.status_code})")
             return None
         print(f"✓ تم تحميل الصورة ({len(resp.content)} بايت)")
         with open("product_image.jpg", "wb") as f:
             f.write(resp.content)
         return "product_image.jpg"
-    except Exception:
+    except Exception as e:
+        print(f"✗ خطأ في تحميل الصورة: {e}")
         return None
 
 def upload_media_to_twitter(image_path):
@@ -199,7 +211,8 @@ def upload_media_to_twitter(image_path):
         media = api_v1.media_upload(image_path)
         print(f"✓ تم رفع صورة المنتج (Media ID: {media.media_id})")
         return str(media.media_id)
-    except Exception:
+    except Exception as e:
+        print(f"✗ خطأ في رفع الصورة: {e}")
         return None
 
 def build_tweet_text(product):
