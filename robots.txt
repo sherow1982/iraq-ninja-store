@@ -1,4 +1,4 @@
-# robots.txt for iraq-ninja-store.arabsad.com
+# robots.txt for sherow1982.github.io/iraq-ninja-store
 # Generated on 2025-11-28
 
 # السماح لجميع محركات البحث المفيدة
@@ -116,7 +116,7 @@ Allow: /
 Crawl-delay: 1
 
 # رابط الـ Sitemap
-Sitemap: https://iraq-ninja-store.arabsad.com/sitemap.xml
+Sitemap: https://sherow1982.github.io/iraq-ninja-store/sitemap.xml
 
 # معلومات الموقع
-# Host: iraq-ninja-store.arabsad.com
+# Host: sherow1982.github.io/iraq-ninja-store
