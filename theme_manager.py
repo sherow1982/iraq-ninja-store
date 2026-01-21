@@ -104,8 +104,12 @@ def process_file(filepath):
 
     # 3. Inject Woodmart Theme & Clean up old style/font duplicates
     # Remove previous injections of Woodmart/Inter Font to avoid duplicates
-    content = re.sub(r'/\* Theme Overhaul.*?/.*?</style>', '', content, flags=re.DOTALL)
+    # Improved regex to catch the block whether it has <style> tags or not, and handle broken HTML
+    content = re.sub(r'(<style>)?\s*/\* Theme Overhaul.*?</style>', '', content, flags=re.DOTALL)
+    content = re.sub(r'/\* Theme Overhaul.*?\*/.*?\.faq-item\s*{.*?}', '', content, flags=re.DOTALL)
+    
     content = content.replace('<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">', '')
+    content = content.replace('</style>\n</style>', '</style>')
     
     # Inject fresh
     if '</head>' in content:
