@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<base href="https://sherow1982.github.io/iraq-ninja-store/">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>الشروط والأحكام - متجر نينجا العراق</title>
@@ -40,22 +41,81 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f5f5f5;
 .content-section h2{color:#2d3748;font-size:28px;margin-bottom:20px;padding-bottom:10px;border-bottom:3px solid #667eea}
 .content-section p{color:#4b5563;font-size:16px;line-height:1.8}
 </style>
+
+
+/* Theme Overhaul: Woodmart Style */
+:root {
+    --primary-color: #764ba2;
+    --secondary-color: #667eea;
+    --text-dark: #2d3748;
+    --bg-light: #f8fafc;
+    --white: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+    --radius: 8px;
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif !important;
+    background-color: var(--bg-light) !important;
+    color: var(--text-dark) !important;
+}
+
+.site-header {
+    background: var(--white) !important;
+    color: var(--text-dark) !important;
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: var(--shadow-sm) !important;
+}
+.logo a, .main-nav a, .dropdown .dropbtn { color: var(--text-dark) !important; }
+.main-nav { border-top: 1px solid #f1f5f9 !important; }
+.search-input { background: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; }
+.search-btn { background: var(--primary-color) !important; }
+
+/* Section Styling */
+.product-section, .reviews-section, .faq-section {
+    background: var(--white) !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: var(--shadow-sm) !important;
+    border-radius: var(--radius) !important;
+    margin-bottom: 30px !important;
+    padding: 30px !important;
+}
+
+.faq-title { 
+    color: var(--text-dark) !important; 
+    font-weight: 800 !important; 
+    border-bottom: 3px solid var(--primary-color);
+    display: inline-block;
+    margin-bottom: 25px !important;
+}
+.faq-item { 
+    background: #f9fafb !important; 
+    border-right: 5px solid var(--primary-color) !important; 
+    margin-bottom: 15px;
+    padding: 20px;
+    border-radius: var(--radius);
+}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
 </head>
 <body>
 
 <header class="site-header">
     <div class="header-container">
         <div class="logo">
-            <a href="/index.html">🛒 متجر نينجا العراق</a>
+            <a href="index.html">🛒 متجر نينجا العراق</a>
         </div>
         <nav class="main-nav">
-            <a href="/index.html">الرئيسية</a>
-            <a href="/categories.html">الفئات</a>
-            <a href="/legal/about.html">من نحن</a>
-            <a href="/legal/contact.html">اتصل بنا</a>
-            <a href="/legal/shipping.html">سياسة الشحن</a>
-            <a href="/legal/returns.html">الاسترجاع</a>
-            <a href="/legal/privacy.html">الخصوصية</a>
+            <a href="index.html">الرئيسية</a>
+            <a href="categories.html">الفئات</a>
+            <a href="legal/about.html">من نحن</a>
+            <a href="legal/contact.html">اتصل بنا</a>
+            <a href="legal/shipping.html">سياسة الشحن</a>
+            <a href="legal/returns.html">الاسترجاع</a>
+            <a href="legal/privacy.html">الخصوصية</a>
         </nav>
         <div class="header-actions">
             <a href="https://wa.me/201110760081" class="whatsapp-btn" target="_blank">
@@ -84,12 +144,12 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f5f5f5;
         <div class="footer-section">
             <h3>روابط سريعة</h3>
             <ul>
-                <li><a href="/index.html">الرئيسية</a></li>
-                <li><a href="/categories.html">الفئات</a></li>
-                <li><a href="/legal/about.html">من نحن</a></li>
-                <li><a href="/legal/contact.html">اتصل بنا</a></li>
-                <li><a href="/legal/shipping.html">سياسة الشحن</a></li>
-                <li><a href="/legal/returns.html">الاسترجاع</a></li>
+                <li><a href="index.html">الرئيسية</a></li>
+                <li><a href="categories.html">الفئات</a></li>
+                <li><a href="legal/about.html">من نحن</a></li>
+                <li><a href="legal/contact.html">اتصل بنا</a></li>
+                <li><a href="legal/shipping.html">سياسة الشحن</a></li>
+                <li><a href="legal/returns.html">الاسترجاع</a></li>
             </ul>
         </div>
         <div class="footer-section">
@@ -102,8 +162,8 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f5f5f5;
         <div class="footer-section">
             <h3>سياساتنا</h3>
             <ul>
-                <li><a href="/legal/privacy.html">سياسة الخصوصية</a></li>
-                <li><a href="/legal/terms.html">الشروط والأحكام</a></li>
+                <li><a href="legal/privacy.html">سياسة الخصوصية</a></li>
+                <li><a href="legal/terms.html">الشروط والأحكام</a></li>
             </ul>
         </div>
     </div>

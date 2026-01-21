@@ -58,7 +58,7 @@ def normalize_slug(name):
     slug = name.strip()
     for ch in ["(", ")", "[", "]", "{", "}", "/", "\\", "|", ",", "،", ".", "!", "؟", ":", ";", "'", '"']:
         slug = slug.replace(ch, "")
-    return slug.replace(" ", "-")
+    return slug.replace(" ", "-").lower()
 
 def make_product_key(product):
     pid = product.get("id") or product.get("handle") or product.get("slug")
@@ -136,7 +136,12 @@ def choose_product_for_post(products, sitemap_links, tracking):
     image_url = extract_image_url(product)
     slug_guess = normalize_slug(name)
     encoded_slug = quote(slug_guess, safe="-")
-    product_url = sitemap_links.get(slug_guess) or sitemap_links.get(encoded_slug) or f"{BASE_URL}/products/{encoded_slug}.html"
+    
+    # Construct URL with SKU if not found in sitemap
+    sku_clean = product.get("sku", "").replace(".", "").lower()
+    default_url = f"{BASE_URL}/products/{encoded_slug}-{sku_clean}.html"
+    
+    product_url = sitemap_links.get(slug_guess) or sitemap_links.get(encoded_slug) or default_url
     tracking["posted_products"].append(key)
     return {"name": name, "price": price, "old_price": old_price, "image_url": image_url, "product_url": product_url, "product_key": key}
 
